@@ -20,3 +20,11 @@ signal.NotifyContext
 - stop function unregisters signal behavior
 - when operations running in Context complete and signals dont need to be diverted to context, code should call stop asap
 
+slog
+- package for structured logging, in which log records include a message, severity level and other attributes
+- defines a type [Logger] which has methods like Info, Error for events of interest
+- Logger method creates a [Record] from arguments and passes it to Handler
+
+http.HandlerFunc
+- type that is an adapter for using functions as HTTP handlers
+- if f is a function with the appropriate signature, HandlerFunc(f) is a Handler that calls f.
