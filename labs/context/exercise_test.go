@@ -1,4 +1,4 @@
-package main
+package contextlab
 
 import (
 	"context"
