@@ -1,0 +1,20 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg
+  namespace: ledgerline
+spec:
+  instances: 2
+  postgresql:
+    parameters:
+      shared_buffers: "64MB"
+      max_connections: "50"
+  bootstrap:
+    initdb:
+      database: ledgerline
+      owner: app
+  storage:
+    size: 1Gi
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { memory: 256Mi }
