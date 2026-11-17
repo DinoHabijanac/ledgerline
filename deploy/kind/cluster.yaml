@@ -1,7 +1,9 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: ledgerline
+# Lean profile: one node. On an 8 GB laptop (WSL2 capped at 5 GB) every extra
+# worker costs a kubelet + kube-proxy + kindnet for no scheduling benefit --
+# a single node schedules all of gateway, payments, psp-sim and CNPG fine.
+# Revisit only if we need to test node-failure chaos, and do that in Codespaces.
 nodes:
   - role: control-plane
-  - role : worker
-  - role: worker
