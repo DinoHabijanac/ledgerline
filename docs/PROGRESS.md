@@ -11,6 +11,8 @@ One row per session. Numbers, not adjectives (CLAUDE.md rule 6).
 | 10 Nov 2026 | Day 2/3 | CNPG Postgres (primary + replica); `001_init.sql`; `httpx` refactor; payments with idempotency + transactional outbox | cluster ~1.8 GiB of 4.8 GiB | `labs/day-02.md`, commit `26ba052` |
 | 17 Nov 2026 | Day 3.5 (debt) | CI billing lock confirmed cleared (green in 1m17s); `cluster.yaml` 3 nodes to 1; `scripts/up.sh` + `migrate.sh` + `smoke.sh`; Day 3 contract verified | bring-up 1 command / ~3 min; smoke 11/11 pass; cluster 2.2 GiB of 4.8 (was 2.5 on 3 nodes) | this file, `scripts/` |
 
+| 18 Nov 2026 | Day 4 Part A | `services/psp-sim`: fake provider with configurable latency, jitter and error rate; cancellation-aware handler; 200/503/no-answer contract documented in ADR-003 | 10 test funcs green under `-race` in 2.0 s | `labs/day-04.md`, `docs/adr/003` |
+
 ## Open debt
 
 - [ ] `docs/adr/002-transactional-outbox.md` is still an unfilled template — every section is a placeholder. Source material is already written in `labs/day-02.md` Q2.
