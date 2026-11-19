@@ -33,7 +33,11 @@ func main() {
 	}
 	defer pool.Close()
 
-	h := &handler{store: &Store{pool: pool}, logger: logger}
+	h := &handler{
+		store:  &Store{pool: pool},
+		psp:    newPSPClient(httpx.EnvOr("PSP_URL", "http://psp-sim.ledgerline")),
+		logger: logger,
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {

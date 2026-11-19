@@ -146,6 +146,35 @@ does not — same principle, applied to a service that *does* have a dependency.
 
 ---
 
+---
+
+## Part B questions (19 Nov) — answer these in my own words
+
+**Q6. Why 202 and not 500 for an unknown outcome?**
+A 500 invites the client to retry. Why is a retry after 500 dangerous here in a
+way it is not after a 422, and what would the client have to do differently for
+a retry to be safe?
+
+**Q7. The budget ordering.**
+Gateway 3s, payments 2s. Describe, step by step, what the customer experiences
+if those two numbers are swapped — and say which database row ends up
+disagreeing with which HTTP response.
+
+**Q8. `WHERE status = 'pending'`.**
+`SetOutcome` only updates rows that are still pending. Two things could call it
+for the same payment at nearly the same moment. Name them, and say what the
+second caller writes to the outbox.
+
+**Q9. The rollout discovery.**
+While building the smoke test, a plain `kubectl set env` on psp-sim produced a
+*timeout* in payments rather than a clean 503 or 200. Explain the packet-level
+reason, and then explain why this makes the reconciliation job more urgent than
+it looked an hour earlier.
+
+**Q10. `context.WithoutCancel`, the counter-argument.**
+We charge the provider on a context that ignores client cancellation. Make the
+best case *against* that choice, then say why it loses.
+
 ## Numbers from tonight
 
 | Thing | Value |
