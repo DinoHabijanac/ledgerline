@@ -22,6 +22,11 @@ spec:
           - name: DATABASE_URL
             valueFrom:
               secretKeyRef: { name: pg-app, key: uri }
+          # Cluster-internal DNS: <service>.<namespace>. The short form works
+          # too, but the explicit namespace survives being copied into another
+          # namespace later.
+          - name: PSP_URL
+            value: http://psp-sim.ledgerline
         readinessProbe:
           httpGet: { path: /readyz, port: 8080 }
           periodSeconds: 5
