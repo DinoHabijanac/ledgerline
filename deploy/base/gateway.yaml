@@ -18,6 +18,14 @@ spec:
         image: ko://github.com/DinoHabijanac/ledgerline/services/gateway
         ports:
           - containerPort: 8080
+        env:
+          - name: PAYMENTS_URL
+            value: http://payments.ledgerline
+          # Must stay LARGER than payments' 2s timeout to psp-sim, so that
+          # payments gets to decide and report the outcome instead of being
+          # cut off by its own caller. See the comment on withTimeout.
+          - name: PAYMENTS_TIMEOUT_MS
+            value: "3000"
         readinessProbe:
           httpGet: { path: /healthz, port: 8080 }
           periodSeconds: 5
