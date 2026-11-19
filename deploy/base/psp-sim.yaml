@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: psp-sim
+  namespace: ledgerline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: psp-sim
+  template:
+    metadata:
+      labels:
+        app: psp-sim
+    spec:
+      containers:
+      - name: psp-sim
+        image: ko://github.com/DinoHabijanac/ledgerline/services/psp-sim
+        ports:
+          - containerPort: 8080
+        env:
+          # Defaults are a healthy provider. Game days change these live with
+          # `kubectl set env deploy/psp-sim PSP_ERROR_RATE=1`, which triggers a
+          # rollout and needs no rebuild.
+          - name: PSP_LATENCY_MS
+            value: "50"
+          - name: PSP_JITTER_MS
+            value: "25"
+          - name: PSP_ERROR_RATE
+            value: "0"
+        # Liveness only, and deliberately so: psp-sim has no dependencies, and
+        # its error rate is configured behaviour rather than ill health. A
+        # probe that tracked PSP_ERROR_RATE would CrashLoopBackOff the pod in
+        # the middle of the very experiment it is there to support.
+        livenessProbe:
+          httpGet: { path: /healthz, port: 8080 }
+          periodSeconds: 10
+        readinessProbe:
+          httpGet: { path: /healthz, port: 8080 }
+          periodSeconds: 5
+        resources:
+          requests: { cpu: 50m, memory: 16Mi }
+          limits: { memory: 32Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: psp-sim
+  namespace: ledgerline
+spec:
+  selector:
+    app: psp-sim
+  ports:
+    - port: 80
+      targetPort: 8080
