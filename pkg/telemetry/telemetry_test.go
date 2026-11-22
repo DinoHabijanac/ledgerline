@@ -114,3 +114,27 @@ func TestSetupWithoutCollectorIsANoop(t *testing.T) {
 		t.Errorf("shutdown: %v", err)
 	}
 }
+
+// The edge must hand the trace ID back to the caller, and it must be the ID of
+// the trace that was actually recorded -- otherwise looking it up finds nothing.
+func TestTraceIDHeaderMatchesRecordedTrace(t *testing.T) {
+	exp := installRecorder(t)
+
+	h := Server(TraceIDHeader(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})), "edge")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/payments", nil))
+
+	got := rec.Header().Get("X-Trace-Id")
+	spans := exp.GetSpans()
+	if len(spans) != 1 {
+		t.Fatalf("got %d spans, want 1", len(spans))
+	}
+	if want := spans[0].SpanContext.TraceID().String(); got != want {
+		t.Errorf("X-Trace-Id = %q, want the recorded trace %q", got, want)
+	}
+	// No incoming traceparent, so the edge span must be a TRUE root. This is
+	// what Jaeger checks when it decides whether a trace is complete.
+	if spans[0].Parent.IsValid() {
+		t.Errorf("edge span has parent %s, want none", spans[0].Parent.SpanID())
+	}
+}

@@ -1,26 +1,27 @@
-trace id: f0ece6627e2c1fc7b109f62536bffa2b
-payment: HTTP 201 {"id":"bceced08-4a11-40ee-a1fd-c825edffe217","account_id":"acct_trace","amount_cents":4200,"currency":"EUR","status":"authorized","psp_ref":"psp_03f486f37442758a"}
+payment: HTTP 201 {"id":"2ec8dd62-5f15-4aad-bc77-167d96f824f2","account_id":"acct_trace","amount_cents":4200,"currency":"EUR","status":"authorized","psp_ref":"psp_4890080043f35204"}
+trace id: cac796ef2284bd53b0b787c47a492a79
 
 15 spans in one trace:
 
-gateway   POST /v1/payments                                 72.1 ms  
-  gateway   POST payments.ledgerline/v1/payments              71.9 ms  
-    payments  POST /v1/payments                                 70.7 ms  payment.outcome=authorized
-      payments  pool.acquire                                       0.8 ms  
-      payments  BEGIN                                              0.7 ms  
-      payments  INSERT                                             1.1 ms  
-      payments  INSERT                                             0.7 ms  
-      payments  COMMIT                                             1.7 ms  
-      payments  POST psp-sim.ledgerline/v1/charge                 60.1 ms  
-        psp-sim   POST /v1/charge                                   56.8 ms  psp.injected_delay_ms=55
+gateway   POST /v1/payments                                 76.2 ms  
+  gateway   POST payments.ledgerline/v1/payments              75.9 ms  
+    payments  POST /v1/payments                                 74.7 ms  payment.outcome=authorized
+      payments  pool.acquire                                       0.1 ms  
+      payments  BEGIN                                              0.5 ms  
+      payments  INSERT                                             1.9 ms  
+      payments  INSERT                                             1.6 ms  
+      payments  COMMIT                                             2.0 ms  
+      payments  POST psp-sim.ledgerline/v1/charge                 54.3 ms  
+        psp-sim   POST /v1/charge                                   53.0 ms  psp.injected_delay_ms=52
       payments  pool.acquire                                       0.0 ms  
-      payments  BEGIN                                              0.6 ms  
-      payments  UPDATE                                             0.8 ms  
-      payments  INSERT                                             0.6 ms  
-      payments  COMMIT                                             2.2 ms  
+      payments  BEGIN                                              0.5 ms  
+      payments  UPDATE                                             8.4 ms  
+      payments  INSERT                                             0.7 ms  
+      payments  COMMIT                                             2.4 ms  
 
   PASS  gateway span
   PASS  payments span
   PASS  psp-sim span
   PASS  Postgres span
-  PASS  single root (nothing orphaned into a separate trace)
+  PASS  exactly one root span
+  PASS  complete: no span references a missing parent

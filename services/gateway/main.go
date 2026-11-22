@@ -126,7 +126,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + httpx.EnvOr("PORT", "8080"),
-		Handler:           telemetry.Server(httpx.LogRequests(logger, newMux(proxy)), "gateway"),
+		Handler:           telemetry.Server(telemetry.TraceIDHeader(httpx.LogRequests(logger, newMux(proxy))), "gateway"),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

@@ -36,7 +36,26 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
+
+// TraceIDHeader returns the request's trace ID to the caller in X-Trace-Id.
+//
+// Use it at the EDGE only (the gateway): that is the one service a client
+// talks to. A customer or a script can quote this ID and you can open exactly
+// that request in Jaeger. If inner services set it too, the reverse proxy
+// would copy theirs into the response as well and the client would see the
+// header twice.
+//
+// Must be wrapped INSIDE Server(), so the span already exists when it runs.
+func TraceIDHeader(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if sc := trace.SpanContextFromContext(r.Context()); sc.IsValid() {
+			w.Header().Set("X-Trace-Id", sc.TraceID().String())
+		}
+		h.ServeHTTP(w, r)
+	})
+}
 
 // Setup installs the global propagator and, if a collector is configured, a
 // tracer provider that exports to it. The returned function flushes buffered
