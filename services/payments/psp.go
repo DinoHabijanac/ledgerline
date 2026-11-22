@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/DinoHabijanac/ledgerline/pkg/telemetry"
 )
 
 // Two sentinel errors, because the caller must be able to tell these apart.
@@ -51,6 +53,12 @@ func newPSPClient(baseURL string) *pspClient {
 			// timeout fires first and payments gets to record an outcome
 			// before anyone upstream gives up on us.
 			Timeout: 2 * time.Second,
+			// Creates the "payments -> psp-sim" client span and injects
+			// `traceparent`, so psp-sim's span lands in the same trace.
+			// Because the handler uses context.WithoutCancel, the trace parent
+			// survives even though cancellation is dropped: WithoutCancel
+			// keeps the context's VALUES, and the span lives in a value.
+			Transport: telemetry.Transport(nil),
 		},
 	}
 }

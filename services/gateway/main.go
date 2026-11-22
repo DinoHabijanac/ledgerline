@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/DinoHabijanac/ledgerline/pkg/httpx"
+	"github.com/DinoHabijanac/ledgerline/pkg/telemetry"
 )
 
 // withTimeout gives every proxied request a hard budget.
@@ -56,6 +57,10 @@ func newPaymentsProxy(target string, budget time.Duration, logger *slog.Logger) 
 	}
 
 	rp := httputil.NewSingleHostReverseProxy(u)
+	// The gateway is where most traces begin. Its transport creates the
+	// "gateway -> payments" client span and sends `traceparent` onward, so
+	// payments joins this trace instead of starting its own.
+	rp.Transport = telemetry.Transport(nil)
 
 	// Without this, a failed upstream call produces a bare 502 and a line on
 	// the proxy's own logger, which is not ours. We want our JSON logs and we
@@ -110,14 +115,20 @@ func main() {
 		logger.Info("payments proxy ready", "target", target, "budget_ms", budgetMS)
 	}
 
-	srv := &http.Server{
-		Addr:              ":" + httpx.EnvOr("PORT", "8080"),
-		Handler:           httpx.LogRequests(logger, newMux(proxy)),
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	shutdownTracing, err := telemetry.Setup(ctx, "gateway")
+	if err != nil {
+		logger.Error("tracing disabled", "err", err)
+		shutdownTracing = func(context.Context) error { return nil }
+	}
+
+	srv := &http.Server{
+		Addr:              ":" + httpx.EnvOr("PORT", "8080"),
+		Handler:           telemetry.Server(httpx.LogRequests(logger, newMux(proxy)), "gateway"),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 
 	go func() {
 		logger.Info("gateway listening", "addr", srv.Addr)
@@ -133,5 +144,8 @@ func main() {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("shutdown failed", "err", err)
+	}
+	if err := shutdownTracing(shutdownCtx); err != nil {
+		logger.Error("tracing flush failed", "err", err)
 	}
 }

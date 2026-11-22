@@ -34,7 +34,7 @@ docker info >/dev/null 2>&1 || die "Docker is not reachable. Start Docker Deskto
 if [[ "${1:-}" == "--deploy" ]]; then
   log "Rebuilding and redeploying Go services"
   ko apply -f deploy/base/
-  kubectl -n "$NS" rollout status deploy/gateway deploy/payments deploy/psp-sim --timeout=120s
+  kubectl -n "$NS" rollout status deploy/gateway deploy/payments deploy/psp-sim deploy/otel-collector deploy/jaeger --timeout=120s
   exit 0
 fi
 
@@ -71,7 +71,7 @@ log "Running migrations"
 # ---------------------------------------------------------------- services
 log "Building and deploying Go services with ko"
 ko apply -f deploy/base/
-kubectl -n "$NS" rollout status deploy/gateway deploy/payments deploy/psp-sim --timeout=180s
+kubectl -n "$NS" rollout status deploy/gateway deploy/payments deploy/psp-sim deploy/otel-collector deploy/jaeger --timeout=180s
 
 log "Up. Cluster state:"
 kubectl -n "$NS" get pods
