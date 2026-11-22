@@ -19,6 +19,10 @@ spec:
         ports:
           - containerPort: 8080
         env:
+          # Spans go to the collector over OTLP/HTTP. Unset this and the
+          # service still propagates trace context but exports nothing.
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: http://otel-collector.ledgerline:4318
           - name: DATABASE_URL
             valueFrom:
               secretKeyRef: { name: pg-app, key: uri }

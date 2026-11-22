@@ -1,0 +1,56 @@
+# Jaeger v2 all-in-one: receives spans from the collector, stores them in
+# memory, serves the UI on :16686.
+#
+# In-memory storage is deliberate for the lean profile: no database, nothing
+# to clean up, and the cluster is deleted at the end of every session anyway.
+# The cost is that traces vanish when the pod restarts -- so screenshot the
+# trace you want to keep as evidence, don't count on it surviving.
+#
+# View it with:
+#   kubectl -n ledgerline port-forward svc/jaeger 16686:16686
+#   open http://localhost:16686
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: ledgerline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+      - name: jaeger
+        image: jaegertracing/jaeger:2.23.0
+        ports:
+          - { name: ui, containerPort: 16686 }
+          - { name: otlp-grpc, containerPort: 4317 }
+        # TCP checks rather than an HTTP path: they only claim "the port is
+        # open", which is exactly what we know to be true, without depending
+        # on a health endpoint whose path differs between Jaeger versions.
+        readinessProbe:
+          tcpSocket: { port: 16686 }
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket: { port: 16686 }
+          periodSeconds: 20
+        resources:
+          requests: { cpu: 50m, memory: 96Mi }
+          limits: { memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: ledgerline
+spec:
+  selector:
+    app: jaeger
+  ports:
+    - { name: ui, port: 16686, targetPort: 16686 }
+    - { name: otlp-grpc, port: 4317, targetPort: 4317 }

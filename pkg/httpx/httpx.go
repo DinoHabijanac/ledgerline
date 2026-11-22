@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 type statusRecorder struct {
@@ -22,12 +24,21 @@ func LogRequests(logger *slog.Logger, next http.Handler) http.Handler {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)
-		logger.Info("request",
+
+		attrs := []any{
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", rec.status,
 			"duration_ms", time.Since(start).Milliseconds(),
-		)
+		}
+		// When this middleware runs inside a traced request, stamp the trace
+		// ID on the log line. That is the bridge between the two tools: find
+		// a slow or failed request in the logs, paste its trace_id into
+		// Jaeger, see exactly which hop was slow.
+		if sc := trace.SpanContextFromContext(r.Context()); sc.IsValid() {
+			attrs = append(attrs, "trace_id", sc.TraceID().String())
+		}
+		logger.Info("request", attrs...)
 	})
 }
 

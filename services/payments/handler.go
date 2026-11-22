@@ -9,6 +9,9 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type createPaymentRequest struct {
@@ -108,9 +111,16 @@ func (h *handler) createPayment(w http.ResponseWriter, r *http.Request) {
 
 	ref, chargeErr := h.psp.Charge(ctx, key, p)
 
+	// Label this request's span with the business result, so Jaeger can answer
+	// "show me every payment whose outcome was unknown" directly. HTTP status
+	// alone cannot: 201 covers both authorized and failed.
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(attribute.String("payment.id", p.ID))
+
 	switch {
 	// ---- charged: the provider told us it moved the money ----
 	case chargeErr == nil:
+		span.SetAttributes(attribute.String("payment.outcome", "authorized"))
 		if err := h.store.SetOutcome(ctx, p.ID, outcomeAuthorized(ref)); err != nil {
 			// We charged the card but could not record it. Do NOT report
 			// success: the payment is still pending in our database and
@@ -125,6 +135,7 @@ func (h *handler) createPayment(w http.ResponseWriter, r *http.Request) {
 
 	// ---- definitely not charged: the only error we may act on ----
 	case errors.Is(chargeErr, errPSPUnavailable):
+		span.SetAttributes(attribute.String("payment.outcome", "failed"))
 		h.logger.Info("provider declined", "payment_id", p.ID)
 		if err := h.store.SetOutcome(ctx, p.ID, outcomeFailed); err != nil {
 			h.logger.Error("could not record failure", "payment_id", p.ID, "err", err)
@@ -146,6 +157,10 @@ func (h *handler) createPayment(w http.ResponseWriter, r *http.Request) {
 		// nothing: the row stays 'pending', no terminal event is published,
 		// and we answer 202 Accepted -- "we have your request, the outcome is
 		// not settled yet". Resolving it is reconciliation's job.
+		span.SetAttributes(attribute.String("payment.outcome", "unknown"))
+		// Recorded as an event, NOT as span status Error: payments did its job
+		// correctly here. The uncertainty belongs to the network, not to us.
+		span.RecordError(chargeErr)
 		h.logger.Warn("provider outcome unknown, leaving payment pending",
 			"payment_id", p.ID, "err", chargeErr)
 		writeJSON(w, http.StatusAccepted, p)
