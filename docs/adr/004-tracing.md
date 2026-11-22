@@ -63,10 +63,18 @@ request path.
 
 ## Consequences
 
-- One request produces one trace across gateway, payments, psp-sim and Postgres.
-  Evidence: `docs/evidence/gate1-trace.txt` (15 spans, single root).
-- Measured on a warm connection: 72.1 ms end to end, of which psp-sim 56.8 ms
-  (79 %) and Postgres ~8 ms (11 %).
+- One request produces one **complete** trace across gateway, payments, psp-sim
+  and Postgres: 15 spans, one true root, no span referencing a missing parent.
+  Evidence: `docs/evidence/gate1-trace.txt`.
+- The gateway returns the trace ID in an `X-Trace-Id` response header (edge
+  only). The first evidence run instead had curl invent a `traceparent`; the
+  gateway's span then pointed at a parent curl never exported, and Jaeger
+  marked the trace *Incomplete*. A `traceparent` asserts "my span exists" —
+  only send one if that span will really be reported.
+- Single-request timings, warm connection, vary run to run: 72–76 ms end to
+  end, psp-sim 53–57 ms (70–79 %). One run showed a 54 ms `COMMIT` against the
+  usual ~2 ms. Single traces explain *where* time went; distributions and
+  percentiles come with Prometheus in the Build phase.
 - First found by tracing: pgx prepares each statement the first time it runs on
   a connection, an extra round trip visible as a child span. Cold vs warm:
   payment `INSERT` 6.9 ms vs 1.2 ms; create transaction 13.5 ms vs 3.9 ms.

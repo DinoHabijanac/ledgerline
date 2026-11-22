@@ -21,8 +21,9 @@ Phase E is the one that matters: a timeout leaves the payment `pending` and
 publishes nothing, because the charge may have succeeded. See
 [ADR-003](adr/003-provider-outcomes.md).
 
-Tracing is verified separately by `./scripts/trace.sh`: it sends a payment with
-a chosen `traceparent` and asserts Jaeger holds one trace with gateway,
+Tracing is verified separately by `./scripts/trace.sh`: it sends one payment,
+reads the trace ID from the gateway's `X-Trace-Id` header and asserts Jaeger
+holds one trace with gateway,
 payments, psp-sim and Postgres spans under a single root.
 
 ## Gates
