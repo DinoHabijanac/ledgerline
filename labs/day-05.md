@@ -6,10 +6,12 @@ spans into *one* trace, and which one makes them *visible*? If you deleted
 `rp.Transport = telemetry.Transport(nil)` from the gateway, what would Jaeger
 show for one payment, and would the payment itself still work?
 
-**Q2. Choosing the trace ID yourself.**
-`scripts/trace.sh` sends its own `traceparent` header. Explain what the gateway
-does with it, and why this means curl is effectively "service zero". What does
-each part of `00-<trace id>-<span id>-01` mean?
+**Q2. The "Incomplete" trace.**
+The first evidence run had curl send its own `traceparent`, and Jaeger marked
+the trace *Incomplete*. What does each part of `00-<trace id>-<span id>-01`
+mean, which part caused the problem, and why? Why is returning `X-Trace-Id`
+from the gateway the better design — for the script, and for a real customer
+reporting a failed payment?
 
 **Q3. The nested INSERT.**
 The first traced payment had 19 spans, the second only 15. What were the four
@@ -36,8 +38,8 @@ sent). Why is "tracing breaks payments" worse than "payments run untraced"?
 | --- | --- |
 | Spans in one payment trace, cold connection | 19 |
 | Spans in one payment trace, warm connection | 15 |
-| End to end, warm | 72.1 ms |
-| psp-sim share of that | 56.8 ms (79 %) |
-| Postgres share | ~8 ms (11 %) |
+| End to end, warm | 72–76 ms (varies run to run) |
+| psp-sim share of that | 53–57 ms (70–79 %) |
+| Postgres share | ~8–18 ms |
 | payment `INSERT`, cold vs warm | 6.9 ms vs 1.2 ms |
 | Slow-provider round trip with tracing on | 2030 ms (smoke 27/27) |

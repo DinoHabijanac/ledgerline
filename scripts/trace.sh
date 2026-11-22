@@ -2,14 +2,14 @@
 # Gate 1 evidence: send ONE payment through the gateway and prove it produced
 # ONE trace spanning gateway -> payments -> psp-sim -> Postgres.
 #
-# The trick: we pick the trace ID ourselves and send it in a W3C `traceparent`
-# header, exactly as an upstream service would. curl becomes "service zero".
-# The gateway's otelhttp handler extracts it and every span downstream joins
-# that trace -- so we know which trace to fetch without searching for it.
+# The gateway starts the trace (its span is the true root) and hands the trace
+# ID back in the X-Trace-Id response header, so we know which trace to fetch.
 #
-#   traceparent: 00-<32 hex trace id>-<16 hex parent span id>-01
-#                 │                                           └ sampled
-#                 └ version
+# An earlier version invented a `traceparent` header in curl instead. That made
+# the gateway's span claim a parent span that curl never reported, and Jaeger
+# rightly flagged the trace "Incomplete". Lesson: a traceparent says "my span
+# exists and is your parent" -- only send one if that span will really be
+# exported.
 set -uo pipefail
 
 NS=${NS:-ledgerline}
@@ -29,16 +29,15 @@ for _ in $(seq 1 60); do
   sleep 0.25
 done
 
-trace_id=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
-parent_id=$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')
-
-echo "trace id: $trace_id"
-code=$(curl -sS -o /tmp/trace.out -w '%{http_code}' -X POST "localhost:$GW/v1/payments" \
+key="trace-$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
+code=$(curl -sS -D /tmp/trace.hdr -o /tmp/trace.out -w '%{http_code}' -X POST "localhost:$GW/v1/payments" \
   -H 'Content-Type: application/json' \
-  -H "Idempotency-Key: trace-$trace_id" \
-  -H "traceparent: 00-$trace_id-$parent_id-01" \
+  -H "Idempotency-Key: $key" \
   --data '{"account_id":"acct_trace","amount_cents":4200,"currency":"EUR"}')
+trace_id=$(grep -i '^x-trace-id:' /tmp/trace.hdr | awk '{print $2}' | tr -d '\r')
 echo "payment: HTTP $code $(cat /tmp/trace.out)"
+[[ -n "$trace_id" ]] || { echo "FAIL: gateway returned no X-Trace-Id header"; exit 1; }
+echo "trace id: $trace_id"
 
 # Spans are batched twice -- by the SDK in each service (~5s) and by the
 # collector (2s) -- so the trace appears a few seconds after the request.
@@ -64,11 +63,17 @@ except Exception as e:
 spans = {s["spanID"]: s for s in t["spans"]}
 svc = lambda s: t["processes"][s["processID"]]["serviceName"]
 children = {}
-roots = []
+roots = []      # spans with NO parent reference at all: true roots
+dangling = []   # spans pointing at a parent that is not in the trace
 for s in spans.values():
-    parent = next((r["spanID"] for r in s.get("references", [])
-                   if r["refType"] == "CHILD_OF" and r["spanID"] in spans), None)
-    (children.setdefault(parent, []) if parent else roots).append(s)
+    refs = [r["spanID"] for r in s.get("references", []) if r["refType"] == "CHILD_OF"]
+    if not refs:
+        roots.append(s)
+    elif refs[0] in spans:
+        children.setdefault(refs[0], []).append(s)
+    else:
+        dangling.append(s)
+        roots.append(s)   # still print it, at the top
 
 def show(s, depth):
     tags = {x["key"]: x["value"] for x in s.get("tags", [])}
@@ -89,7 +94,11 @@ checks = [
     ("payments span", "payments" in services),
     ("psp-sim span",  "psp-sim" in services),
     ("Postgres span", len(db) > 0),
-    ("single root (nothing orphaned into a separate trace)", len(roots) == 1),
+    ("exactly one root span", len(roots) == 1),
+    # What Jaeger means by "Incomplete": some span names a parent that never
+    # arrived. An earlier version of this script missed it by counting such a
+    # span as a root.
+    ("complete: no span references a missing parent", not dangling),
 ]
 print()
 for name, ok in checks:
