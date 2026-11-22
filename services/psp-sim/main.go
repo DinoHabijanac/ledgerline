@@ -30,6 +30,9 @@ import (
 	"time"
 
 	"github.com/DinoHabijanac/ledgerline/pkg/httpx"
+	"github.com/DinoHabijanac/ledgerline/pkg/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // config is read once at startup and never mutated afterwards, so concurrent
@@ -92,12 +95,20 @@ func (c config) charge(w http.ResponseWriter, r *http.Request) {
 	timer := time.NewTimer(delay)
 	defer timer.Stop() // release the timer early when the context wins the race
 
+	// The span otelhttp opened for this request. Annotating it means Jaeger
+	// shows not just THAT psp-sim was slow, but how slow it was told to be.
+	span := trace.SpanFromContext(r.Context())
+	span.SetAttributes(attribute.Int64("psp.injected_delay_ms", delay.Milliseconds()))
+
 	select {
 	case <-timer.C:
 		// slept the full delay, carry on and answer
 	case <-r.Context().Done():
 		// Caller hung up. No point writing to a connection that is going away,
 		// and no point charging a card nobody is waiting to hear about.
+		// The event makes this visible in the trace: a span that ends early
+		// with this marker is a caller's timeout seen from the other side.
+		span.AddEvent("caller gave up before the delay elapsed")
 		return
 	}
 
@@ -105,6 +116,7 @@ func (c config) charge(w http.ResponseWriter, r *http.Request) {
 	// fires and errorRate 0 never does. Both extremes are deterministic, which
 	// is what makes them testable.
 	if rand.Float64() < c.errorRate {
+		span.SetAttributes(attribute.Bool("psp.injected_failure", true))
 		// 503 is a PROMISE: nothing was charged. payments leans on this to mark
 		// a payment failed without risking a double charge later.
 		http.Error(w, "provider unavailable", http.StatusServiceUnavailable)
@@ -144,14 +156,24 @@ func main() {
 		"error_rate", cfg.errorRate,
 	)
 
-	srv := &http.Server{
-		Addr:              ":" + httpx.EnvOr("PORT", "8080"),
-		Handler:           httpx.LogRequests(logger, newMux(cfg)),
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	shutdownTracing, err := telemetry.Setup(ctx, "psp-sim")
+	if err != nil {
+		// Tracing is diagnostics, not the product: a broken collector config
+		// must never stop the service from charging cards.
+		logger.Error("tracing disabled", "err", err)
+		shutdownTracing = func(context.Context) error { return nil }
+	}
+
+	srv := &http.Server{
+		Addr: ":" + httpx.EnvOr("PORT", "8080"),
+		// Order matters: telemetry outermost, so the span already exists when
+		// LogRequests runs and the log line can carry its trace_id.
+		Handler:           telemetry.Server(httpx.LogRequests(logger, newMux(cfg)), "psp-sim"),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 
 	go func() {
 		logger.Info("psp-sim listening", "addr", srv.Addr)
@@ -167,5 +189,10 @@ func main() {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("shutdown failed", "err", err)
+	}
+	// After the server, not before: the last in-flight requests finish during
+	// srv.Shutdown and their spans must still get flushed.
+	if err := shutdownTracing(shutdownCtx); err != nil {
+		logger.Error("tracing flush failed", "err", err)
 	}
 }
