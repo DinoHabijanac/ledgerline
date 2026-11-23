@@ -2,20 +2,23 @@
 
 One row per session. Numbers, not adjectives (CLAUDE.md rule 6).
 
-| Date | Session | Shipped | Numbers | Artifact |
-| --- | --- | --- | --- | --- |
-| 28 Oct 2026 | Day 0 | WSL2, Go 1.27, Docker; public repo; gateway `/healthz` + graceful shutdown; first test | — | `labs/day-00.md`, commit `ebc3d55` |
-| 29 Oct 2026 | Day 1 | `LogRequests` middleware + own test; kind + ko; gateway on kind with probes; pod-kill recovery observed | control-plane 695 MiB | `labs/day-01.md`, commit `bb24c1e` |
-| 29 Oct 2026 | Plan | Re-sized plan for 8 GB: lean profile + Codespaces for heavy work | WSL cap 5 GB / swap 4 GB | CLAUDE.md |
-| 10 Nov 2026 | Day 2/3 | CNPG Postgres (primary + replica); `001_init.sql`; `httpx` refactor; payments with idempotency + transactional outbox | cluster ~1.8 GiB of 4.8 GiB | `labs/day-02.md`, commit `26ba052` |
-| 11 Nov 2026 | Prep | Read Postgres transactions, Read Committed, `ON CONFLICT`, pgx, CloudNativePG; Student Pack confirmed | — | notes |
-| 17 Nov 2026 | Day 3.5 (debt) | CI billing lock confirmed cleared (green in 1m17s); `cluster.yaml` 3 nodes to 1; `scripts/up.sh` + `migrate.sh` + `smoke.sh`; Day 3 contract verified | bring-up 1 command / ~3 min; smoke 11/11 pass; cluster 2.2 GiB of 4.8 (was 2.5 on 3 nodes) | this file, `scripts/` |
-| 18 Nov 2026 | Day 4 Part A | `services/psp-sim`: fake provider with configurable latency, jitter and error rate; cancellation-aware handler; 200/503/no-answer contract documented in ADR-003 | 10 test funcs green under `-race` in 2.0 s | `labs/day-04.md`, `docs/adr/003` |
-| 19 Nov 2026 | Day 4 Part A (A2) + Part B | `migrations/002_psp.sql`; psp-sim deployed; PSP client with a 2 s budget; `SetOutcome`; the three-outcome switch with `context.WithoutCancel`; gateway reverse proxy with a 3 s budget; ADR-003 | smoke 27/27; slow-provider round trip 2012 ms (inner 2 s fired, not the outer 3 s); 29 Go tests green under `-race` | `docs/adr/003`, `labs/day-04.md` |
-| 22 Nov 2026 | Day 5 — **Gate 1 met** | OpenTelemetry in all three services (`pkg/telemetry`); otelpgx DB spans; `trace_id` on every log line; OTel Collector 0.165.0 + Jaeger 2.23.0 in-cluster; `X-Trace-Id` returned by the gateway; `scripts/trace.sh`; ADR-004 | one complete trace (15 spans, one true root, nothing dangling), gateway → payments → psp-sim → Postgres; 72–76 ms end to end, psp-sim 70–79 %; cold vs warm `INSERT` 6.9 vs 1.2 ms; smoke still 27/27 | `docs/evidence/gate1-trace.txt`, `docs/adr/004`, `labs/day-05.md` |
+**Hours** = time actually spent in the session. `n/r` = not recorded (sessions before 24 Nov 2026, when tracking started).
+
+| Date | Session | Hours | Shipped | Numbers | Artifact |
+| --- | --- | --- | --- | --- | --- |
+| 28 Oct 2026 | Day 0 | n/r | WSL2, Go 1.27, Docker; public repo; gateway `/healthz` + graceful shutdown; first test | — | `labs/day-00.md`, commit `ebc3d55` |
+| 29 Oct 2026 | Day 1 | n/r | `LogRequests` middleware + own test; kind + ko; gateway on kind with probes; pod-kill recovery observed | control-plane 695 MiB | `labs/day-01.md`, commit `bb24c1e` |
+| 29 Oct 2026 | Plan | n/r | Re-sized plan for 8 GB: lean profile + Codespaces for heavy work | WSL cap 5 GB / swap 4 GB | CLAUDE.md |
+| 10 Nov 2026 | Day 2/3 | n/r | CNPG Postgres (primary + replica); `001_init.sql`; `httpx` refactor; payments with idempotency + transactional outbox | cluster ~1.8 GiB of 4.8 GiB | `labs/day-02.md`, commit `26ba052` |
+| 11 Nov 2026 | Prep | n/r | Read Postgres transactions, Read Committed, `ON CONFLICT`, pgx, CloudNativePG; Student Pack confirmed | — | notes |
+| 17 Nov 2026 | Day 3.5 (debt) | n/r | CI billing lock confirmed cleared (green in 1m17s); `cluster.yaml` 3 nodes to 1; `scripts/up.sh` + `migrate.sh` + `smoke.sh`; Day 3 contract verified | bring-up 1 command / ~3 min; smoke 11/11 pass; cluster 2.2 GiB of 4.8 (was 2.5 on 3 nodes) | this file, `scripts/` |
+| 18 Nov 2026 | Day 4 Part A | n/r | `services/psp-sim`: fake provider with configurable latency, jitter and error rate; cancellation-aware handler; 200/503/no-answer contract documented in ADR-003 | 10 test funcs green under `-race` in 2.0 s | `labs/day-04.md`, `docs/adr/003` |
+| 19 Nov 2026 | Day 4 Part A (A2) + Part B | n/r | `migrations/002_psp.sql`; psp-sim deployed; PSP client with a 2 s budget; `SetOutcome`; the three-outcome switch with `context.WithoutCancel`; gateway reverse proxy with a 3 s budget; ADR-003 | smoke 27/27; slow-provider round trip 2012 ms (inner 2 s fired, not the outer 3 s); 29 Go tests green under `-race` | `docs/adr/003`, `labs/day-04.md` |
+| 22 Nov 2026 | Day 5 — **Gate 1 met** | n/r | OpenTelemetry in all three services (`pkg/telemetry`); otelpgx DB spans; `trace_id` on every log line; OTel Collector 0.165.0 + Jaeger 2.23.0 in-cluster; `X-Trace-Id` returned by the gateway; `scripts/trace.sh`; ADR-004 | one complete trace (15 spans, one true root, nothing dangling), gateway → payments → psp-sim → Postgres; 72–76 ms end to end, psp-sim 70–79 %; cold vs warm `INSERT` 6.9 vs 1.2 ms; smoke still 27/27 | `docs/evidence/gate1-trace.txt`, `docs/adr/004`, `labs/day-05.md` |
 
 ## Open debt
 
+- [ ] Open lab questions: `labs/day-04.md` Q6–Q10, `labs/day-05.md` Q1–Q5. Answer before the Build phase starts (30 Nov).
 - [ ] `docs/adr/002-transactional-outbox.md` is still an unfilled template — every section is a placeholder. Source material is already written in `labs/day-02.md` Q2.
 - [ ] `docs/adr/001-local-platform-kind-ko.md` is a skeleton with placeholders (kind + ko decision from Day 1).
 - [x] ~~No `scripts/up.sh`~~ — done 17 Nov: `up.sh`, `migrate.sh`, `smoke.sh`.
