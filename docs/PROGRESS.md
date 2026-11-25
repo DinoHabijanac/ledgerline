@@ -24,6 +24,7 @@ One row per session. Numbers, not adjectives (CLAUDE.md rule 6).
 - [x] ~~No `scripts/up.sh`~~ — done 17 Nov: `up.sh`, `migrate.sh`, `smoke.sh`.
 - [ ] `README.md` is a 3-line stub. Worth fixing now that there is something to show: a G1 trace and three ADRs.
 - [ ] Reconciliation job for `pending` payments (ADR-003 consequence; ordinary deploys create them).
+- [ ] Stop hook (`.claude/hooks/go-test-on-stop.sh`) decides "Go changed?" against the local `origin/main`, which is only as fresh as the last fetch. After a merge it can run the tests every turn until the next fetch (false positive, ~0.4 s each with the test cache, single sample). Every fix trades this for something worse: `git fetch` in the hook (network call every turn), `@{u}..HEAD` (errors before the first push, skips pushed-but-untested work), local `main` (just as stale). Open question: with the cache, drop the check and always run `go test -race ./...`? See ADR-005.
 
 ## Verified contracts
 
