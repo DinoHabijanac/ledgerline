@@ -29,6 +29,17 @@ Jaeger is in-memory: capture any trace evidence into `docs/evidence/` before tea
 - A design decision gets an ADR in `docs/adr/` (next free number).
 - Work goes on a branch and lands through a PR with green CI.
 
+## Commits and PRs
+
+PRs are squash-merged, so each PR becomes one commit on `main`: the PR title is its subject, and the branch's commit messages are its body.
+
+- One concern per PR. Split a docs change from a code change rather than mixing them.
+- PR title: `area: what changed`, lower-case area and summary (proper nouns keep their capitals), no trailing period, at most 72 characters. The area is the part of the repo, e.g. `gateway`, `payments`, `psp-sim`, `ledger`, `platform`, `tracing`, `migrations`, `ci`, `docs`, `labs`, `dev`. The `pr-title` CI check enforces the format.
+- Commit bodies say why, not just what: the decision and its alternative, the failure it prevents, what was measured, and how it was verified (tests, `smoke.sh` 27/27). Wrap at 72 columns.
+- No diary prefixes (`day-05: ...`) and no `wip` / `fix stuff` / `address review` commits: fold fix-ups into the commit they fix before opening the PR.
+- Keep `Co-Authored-By` trailers on AI-assisted commits.
+- Never rewrite `main`. It's protected; history was cleaned once, on 26 Nov 2026.
+
 ## Writing
 
 - Numbers, not adjectives: latency, memory, time to detect, time to recover. Say when a number is a single sample.

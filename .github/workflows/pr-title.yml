@@ -1,0 +1,37 @@
+name: pr-title
+
+# PRs are squash-merged, so the PR title becomes the commit subject on main.
+# Enforce `area: what changed` (CLAUDE.md, "Commits and PRs").
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the PR title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          printf 'Title: %s\n' "$TITLE"
+          fail=0
+          if ! printf '%s' "$TITLE" | grep -qE '^[a-z][a-z0-9-]*(\([A-Za-z0-9._/-]+\))?: [^ ]'; then
+            echo "::error::Title must look like 'area: what changed' (lower-case area, colon, one space, then the summary)."
+            fail=1
+          fi
+          if [ "${#TITLE}" -gt 72 ]; then
+            echo "::error::Title is ${#TITLE} characters; the limit is 72."
+            fail=1
+          fi
+          case "$TITLE" in
+            *.) echo "::error::No trailing period."; fail=1 ;;
+          esac
+          if printf '%s' "$TITLE" | grep -qiE '^(day-[0-9]+|wip|fix stuff|update)\b'; then
+            echo "::error::No diary or placeholder titles (day-NN, wip, update)."
+            fail=1
+          fi
+          exit $fail
