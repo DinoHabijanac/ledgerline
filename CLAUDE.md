@@ -24,7 +24,7 @@ Jaeger is in-memory: capture any trace evidence into `docs/evidence/` before tea
 
 ## When a change is done
 
-- Go code: `go vet ./...` and `go test -race ./...` pass (a hook runs the tests when a session ends).
+- Go code: `go vet ./...` and `go test -race ./...` pass. A Stop hook runs the tests at the end of every turn while Go files differ from `origin/main`; Go's test cache keeps an unchanged re-run at ~0.4 s.
 - Anything that touches the running platform: `./scripts/smoke.sh` and `./scripts/trace.sh` pass against a fresh bring-up. Paste their final lines into the session.
 - A design decision gets an ADR in `docs/adr/` (next free number).
 - Work goes on a branch and lands through a PR with green CI.
