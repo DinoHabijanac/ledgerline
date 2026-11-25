@@ -1,0 +1,43 @@
+name: automerge-low-risk
+
+# Review tier 1: PRs that only touch low-risk files merge on their own once
+# every required check is green. Anything else waits for a human merge.
+#
+# Low risk:   README.md, labs/, docs/PROGRESS.md, docs/evidence/
+# Not low:    everything else, including docs/adr/ (design decisions are
+#             reviewed) and CLAUDE.md / .claude/ (they change agent behaviour).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  classify:
+    # Only the owner's own PRs from this repo: never forks or other authors.
+    if: >-
+      github.event.pull_request.user.login == github.repository_owner &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable or disable auto-merge by changed paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          files=$(gh pr diff "$PR" --repo "$REPO" --name-only)
+          printf 'Changed files:\n%s\n\n' "$files"
+          risky=$(printf '%s\n' "$files" | grep -vE '^(README\.md|labs/.*|docs/PROGRESS\.md|docs/evidence/.*)$' || true)
+          if [ -n "$risky" ]; then
+            printf 'Needs a human merge because of:\n%s\n' "$risky"
+            # A later push may have added risky files to a PR that was low-risk.
+            gh pr merge "$PR" --repo "$REPO" --disable-auto 2>/dev/null || true
+            exit 0
+          fi
+          echo "Low-risk only: enabling auto-merge (merges when required checks pass)."
+          gh pr merge "$PR" --repo "$REPO" --auto --squash
