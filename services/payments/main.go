@@ -36,13 +36,14 @@ func main() {
 	cfg.MaxConns = 5
 	// Every query becomes a child span of whatever request ran it -- this is
 	// the "-> Postgres" hop of Gate 1's trace. Span names are trimmed to
-	// "INSERT payments" rather than the whole statement. Query PARAMETERS are
+	// "INSERT payments" rather than the whole statement (otelpgx's default
+	// since v0.13). Query PARAMETERS are
 	// not recorded (the library's default), so account IDs and amounts never
 	// leave the database inside a trace.
 	//
 	// No spans are created for queries without a traced parent: otelpgx checks
 	// IsRecording() first, so the /readyz ping every 5s stays invisible.
-	cfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
+	cfg.ConnConfig.Tracer = otelpgx.NewTracer()
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		logger.Error("db pool", "err", err)
@@ -58,7 +59,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
@@ -67,7 +68,7 @@ func main() {
 			http.Error(w, "db unavailable", http.StatusServiceUnavailable)
 			return
 		}
-		w.Write([]byte("ready"))
+		_, _ = w.Write([]byte("ready"))
 	})
 	mux.HandleFunc("POST /v1/payments", h.createPayment)
 
