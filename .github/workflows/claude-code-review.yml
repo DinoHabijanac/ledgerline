@@ -2,13 +2,18 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    # Review once when the PR is ready, not on every push: fix-up pushes would
+    # each cost a full review from the subscription. To re-review after a big
+    # change, comment "@claude review this PR".
+    types: [opened, ready_for_review, reopened]
+    # Skipped when EVERY changed file is low-risk (review tier 1). Those PRs
+    # auto-merge on green checks; this check is not required, so skipping it
+    # never blocks a merge. Keep in sync with automerge-low-risk.yml.
+    paths-ignore:
+      - "README.md"
+      - "labs/**"
+      - "docs/PROGRESS.md"
+      - "docs/evidence/**"
 
 jobs:
   claude-review:
