@@ -24,7 +24,9 @@ func installRecorder(t *testing.T) *tracetest.InMemoryExporter {
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	t.Cleanup(func() {
-		tp.Shutdown(context.Background())
+		if err := tp.Shutdown(context.Background()); err != nil {
+			t.Errorf("tracer provider shutdown: %v", err)
+		}
 		otel.SetTracerProvider(prevTP)
 		otel.SetTextMapPropagator(prevProp)
 	})
@@ -50,7 +52,7 @@ func TestClientAndServerSpansJoinOneTrace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// 1. The header actually went over the wire.
 	if gotTraceparent == "" {

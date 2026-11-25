@@ -124,7 +124,7 @@ func (c config) charge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(chargeResponse{
+	_ = json.NewEncoder(w).Encode(chargeResponse{
 		PSPRef: fmt.Sprintf("psp_%016x", rand.Uint64()),
 		Status: "approved",
 	})
@@ -137,7 +137,7 @@ func newMux(cfg config) *http.ServeMux {
 	// Liveness only. This service has no dependencies, so "the process is up"
 	// is the whole truth and there is no separate /readyz worth writing.
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("POST /v1/charge", cfg.charge)
 	return mux

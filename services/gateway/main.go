@@ -88,7 +88,7 @@ func newMux(paymentsProxy http.Handler) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 	if paymentsProxy != nil {
 		mux.Handle("POST /v1/payments", paymentsProxy)

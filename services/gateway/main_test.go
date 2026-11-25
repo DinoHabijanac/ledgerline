@@ -56,7 +56,7 @@ func TestProxyForwardsRequestAndResponse(t *testing.T) {
 		gotPath, gotKey, gotBody, gotMethod = r.URL.Path, r.Header.Get("Idempotency-Key"), string(b), r.Method
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(`{"id":"p1","status":"authorized"}`))
+		_, _ = w.Write([]byte(`{"id":"p1","status":"authorized"}`))
 	}))
 	defer upstream.Close()
 
@@ -99,7 +99,7 @@ func TestProxyForwardsRequestAndResponse(t *testing.T) {
 func TestProxyPreserves202(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
-		w.Write([]byte(`{"id":"p1","status":"pending"}`))
+		_, _ = w.Write([]byte(`{"id":"p1","status":"pending"}`))
 	}))
 	defer upstream.Close()
 
