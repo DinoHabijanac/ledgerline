@@ -6,7 +6,7 @@ A small Go payments platform with a double-entry ledger, built to be broken (cha
 
 - €0 budget: open source, the GitHub free tier and the Codespaces quota only. Don't add paid services or hosts; the evidence in the repo is the demo.
 - Dev machine: an 8 GB laptop with WSL2 capped at 5 GB. Docker Desktop has to be running before bring-up (`up.sh` checks).
-- Lean profile on the laptop: single-node kind, 1 replica per service (gateway 2), NATS with 1 node, Jaeger in-memory. Chaos Mesh only from week 9, the Sigstore policy-controller from week 12, and Dependency-Track never on the laptop.
+- Lean profile on the laptop: single-node kind, 1 replica per service (gateway 2), NATS with 1 node, Jaeger in-memory. Chaos Mesh only from week 9 (28 Dec 2026), the Sigstore policy-controller from week 12 (18 Jan 2027), and Dependency-Track never on the laptop.
 - Heavy work (game days, Dependency-Track, re-runs) goes to a 4-core / 16 GB Codespace. Delete it once the results are pushed.
 - Close browser tabs before bring-up; check `docker stats --no-stream` when memory is in doubt.
 
