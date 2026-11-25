@@ -39,3 +39,40 @@ jobs:
           go-version-file: go.mod
       - run: go version
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...
+
+  # The real contracts: the whole platform on kind, driven through the gateway.
+  # smoke.sh = idempotency + the three provider outcomes (27 assertions),
+  # trace.sh = one complete trace gateway -> payments -> psp-sim -> Postgres.
+  # Same scripts as on the laptop; the free public-repo runner has 16 GB.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Install kind and ko (same versions as the laptop)
+        run: |
+          go install sigs.k8s.io/kind@v0.25.0
+          go install github.com/google/ko@v0.19.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - run: ./scripts/up.sh
+      - run: ./scripts/smoke.sh
+      - run: ./scripts/trace.sh
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          kubectl get pods -A -o wide || true
+          kubectl -n ledgerline get events --sort-by=.lastTimestamp | tail -40 || true
+          for d in gateway payments psp-sim; do
+            echo "=== logs: $d"; kubectl -n ledgerline logs deploy/$d --tail=80 || true
+          done
+          kind export logs /tmp/kind-logs --name ledgerline || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: kind-logs
+          path: /tmp/kind-logs
+          retention-days: 7
