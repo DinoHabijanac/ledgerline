@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # PostToolUse hook (Edit/Write/MultiEdit): fast feedback on the Go file Claude
-# just changed. gofmt on the file, go vet on its package.
-# Exit 2 = the message on stderr goes back to Claude, which fixes it.
+# just changed. gofmt on the file, go vet on its package (ADR-005).
+# gofmt failure: exit 2, stderr goes back to Claude as an error to fix now.
+# go vet failure: exit 0 with the output as additionalContext, a note rather
+# than a demand, because mid-way through a multi-file change the package is
+# expected not to vet. The Stop hook's go test and CI are the hard gates.
 set -uo pipefail
 export PATH="$PATH:/usr/local/go/bin:$HOME/go/bin"
 
@@ -23,7 +26,8 @@ fi
 
 pkg="./$(dirname "$rel")"
 if ! out=$(go vet "$pkg" 2>&1); then
-  printf 'go vet %s failed:\n%s\n' "$pkg" "$out" >&2
-  exit 2
+  # Build the JSON in Python so quotes and newlines in vet's output are escaped.
+  msg=$(printf 'go vet %s reports (non-blocking; fine if a planned edit fixes it):\n%s' "$pkg" "$out")
+  MSG="$msg" python3 -c 'import json,os; print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": os.environ["MSG"]}}))'
 fi
 exit 0
