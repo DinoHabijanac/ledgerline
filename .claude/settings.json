@@ -11,8 +11,7 @@
       "Bash(git push * --force*)",
       "Bash(git push * -f*)",
       "Bash(git reset --hard*)",
-      "Bash(git clean -f*)",
-      "Bash(git clean -d*)",
+      "Bash(git clean *)",
       "Bash(gh repo delete*)",
       "Bash(gh pr merge*)"
     ]
