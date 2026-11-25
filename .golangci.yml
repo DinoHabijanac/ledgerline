@@ -1,0 +1,8 @@
+version: "2"
+
+# Default linter set (errcheck, govet, ineffassign, staticcheck, unused).
+linters:
+  exclusions:
+    paths:
+      # Learning exercises, not platform code.
+      - labs/

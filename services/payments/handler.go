@@ -47,7 +47,9 @@ type handler struct {
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	// The status line is already on the wire, so an encode error (usually the
+	// client hung up) can't change what the client sees. Nothing useful to do.
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func (h *handler) createPayment(w http.ResponseWriter, r *http.Request) {

@@ -46,7 +46,8 @@ func (s *Store) CreatePayment(ctx context.Context, key, reqHash string, req crea
 	if err != nil {
 		return Payment{}, false, err
 	}
-	defer tx.Rollback(ctx) // no-op once committed
+	// No-op once committed (pgx then returns ErrTxClosed, which we ignore).
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	var p Payment
 	err = tx.QueryRow(ctx, `
@@ -116,7 +117,7 @@ func (s *Store) SetOutcome(ctx context.Context, id string, o outcome) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	var p Payment
 	err = tx.QueryRow(ctx, `

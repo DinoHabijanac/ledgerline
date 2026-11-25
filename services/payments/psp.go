@@ -108,7 +108,7 @@ func (c *pspClient) Charge(ctx context.Context, idempotencyKey string, p Payment
 		// We cannot know. UNKNOWN.
 		return "", fmt.Errorf("%w: %v", errPSPUnknown, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -127,12 +127,12 @@ func (c *pspClient) Charge(ctx context.Context, idempotencyKey string, p Payment
 	case http.StatusServiceUnavailable:
 		// The contract. 503 is a promise that nothing was charged.
 		// Drain the body so this connection can be reused from the pool.
-		io.Copy(io.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, resp.Body)
 		return "", errPSPUnavailable
 
 	default:
 		// 500, 502, 418, anything unexpected: no promise was made either way.
-		io.Copy(io.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, resp.Body)
 		return "", fmt.Errorf("%w: provider returned %d", errPSPUnknown, resp.StatusCode)
 	}
 }
